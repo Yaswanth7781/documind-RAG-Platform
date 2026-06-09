@@ -1,0 +1,11 @@
+fastapi
+uvicorn
+pydantic
+python-multipart
+pymupdf
+langchain-text-splitters
+
+pinecone
+boto3
+python-dotenv
+pyjwt

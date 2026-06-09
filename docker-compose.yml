@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: UniGuard-AI-Frontend/Dockerfile
+    ports:
+      - "5173:5173"
+    environment:
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - api-gateway
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:8001
+      - DOCUMENT_SERVICE_URL=http://document-service:8002
+      - CHAT_SERVICE_URL=http://chat-service:8003
+    depends_on:
+      - auth-service
+      - document-service
+      - chat-service
+    volumes:
+      - ./shared:/app/shared
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: auth-service/Dockerfile
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    volumes:
+      - ./shared:/app/shared
+
+  document-service:
+    build:
+      context: .
+      dockerfile: document-service/Dockerfile
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+    volumes:
+      - ./shared:/app/shared
+      - model_cache:/root/.cache
+
+  chat-service:
+    build:
+      context: .
+      dockerfile: chat-service/Dockerfile
+    ports:
+      - "8003:8003"
+    environment:
+      - AUDIT_SERVICE_URL=http://audit-service:8004
+    env_file:
+      - .env
+    depends_on:
+      - audit-service
+    volumes:
+      - ./shared:/app/shared
+      - model_cache:/root/.cache
+
+  audit-service:
+    build:
+      context: .
+      dockerfile: audit-service/Dockerfile
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./data:/app/data
+      - ./shared:/app/shared
+    env_file:
+      - .env
+
+volumes:
+  model_cache:

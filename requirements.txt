@@ -1,0 +1,13 @@
+fastapi
+uvicorn
+pydantic
+requests
+python-dotenv
+pymupdf
+langchain-text-splitters
+chromadb
+pinecone
+sqlalchemy
+pyjwt
+python-multipart
+boto3
