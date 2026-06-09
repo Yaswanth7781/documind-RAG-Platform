@@ -11,4 +11,3 @@ sqlalchemy
 pyjwt
 python-multipart
 boto3
-Dnand
