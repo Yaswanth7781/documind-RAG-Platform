@@ -1,57 +1,102 @@
 pipeline {
-    agent any
+agent any
 
-    environment {
-        DOCKER_COMPOSE_FILE = 'docker-compose.yml'
-    }
+```
+environment {
+    DOCKER_COMPOSE_FILE = 'docker-compose.yml'
+}
 
-    stages {
-        stage('Checkout') {
-            steps {
-                // Checkout code from the configured source control repository
-                checkout scm
-            }
-        }
+stages {
 
-        stage('Build Services') {
-            steps {
-                echo 'Building Docker images for all microservices...'
-                // Build all services defined in docker-compose.yml
-                // Note: Change 'sh' to 'bat' if Jenkins is running on a Windows node without bash
-                sh 'docker-compose -f ${DOCKER_COMPOSE_FILE} build'
-            }
-        }
-
-        stage('Test') {
-            steps {
-                echo 'Running tests...'
-                // Add your testing steps here. For example:
-                // sh 'docker-compose -f ${DOCKER_COMPOSE_FILE} run --rm api-gateway pytest'
-                // sh 'docker-compose -f ${DOCKER_COMPOSE_FILE} run --rm frontend npm test'
-                echo 'Skipping tests for now...'
-            }
-        }
-
-        stage('Deploy') {
-            steps {
-                echo 'Deploying application...'
-                // Start the services in detached mode
-                sh 'docker-compose -f ${DOCKER_COMPOSE_FILE} up -d'
-            }
+    stage('Checkout') {
+        steps {
+            checkout scm
         }
     }
 
-    post {
-        always {
-            echo 'Pipeline execution finished.'
-            // Optional: clean up resources or bring down containers
-            // sh 'docker-compose -f ${DOCKER_COMPOSE_FILE} down'
-        }
-        success {
-            echo 'Pipeline succeeded successfully!'
-        }
-        failure {
-            echo 'Pipeline failed. Please check the logs.'
+    stage('Build Services') {
+        steps {
+            echo 'Building Docker images for all microservices...'
+            sh "docker-compose -f ${DOCKER_COMPOSE_FILE} build"
         }
     }
+
+    stage('Test') {
+        steps {
+            echo 'Running tests...'
+            echo 'Skipping tests for now...'
+        }
+    }
+
+    stage('Create Environment File') {
+        steps {
+            withCredentials([
+                string(credentialsId: 'groq-api-key', variable: 'GROQ_API_KEY'),
+                string(credentialsId: 'pinecone-api-key', variable: 'PINECONE_API_KEY'),
+                string(credentialsId: 'admin-pin', variable: 'ADMIN_PIN')
+            ]) {
+                sh '''
+```
+
+cat > .env << EOF
+GROQ_API_KEY=$GROQ_API_KEY
+GROQ_MODEL=llama-3.1-8b-instant
+GROQ_BASE_URL=https://api.groq.com/openai/v1/chat/completions
+
+PINECONE_API_KEY=$PINECONE_API_KEY
+PINECONE_ENVIRONMENT=us-east-1
+PINECONE_INDEX_NAME=documind-index-1024
+
+ADMIN_PIN=$ADMIN_PIN
+EOF
+
+echo "Created .env file"
+ls -la .env
+'''
+}
+}
+}
+
+```
+    stage('Deploy') {
+        steps {
+            echo 'Deploying application...'
+
+            sh '''
+```
+
+docker-compose -f docker-compose.yml down || true
+docker-compose -f docker-compose.yml up -d
+'''
+}
+}
+
+```
+    stage('Verify Deployment') {
+        steps {
+            sh '''
+```
+
+docker ps
+'''
+}
+}
+}
+
+```
+post {
+    always {
+        echo 'Pipeline execution finished.'
+    }
+
+    success {
+        echo '✅ Pipeline succeeded successfully!'
+    }
+
+    failure {
+        echo '❌ Pipeline failed. Please check the logs.'
+    }
+}
+```
+
 }
