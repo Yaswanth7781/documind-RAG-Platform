@@ -30,9 +30,9 @@ pipeline {
         stage('Create Environment File') {
             steps {
                 withCredentials([
-                    string(credentialsId: 'groq-api-key', variable: 'GROQ_API_KEY'),
-                    string(credentialsId: 'pinecone-api-key', variable: 'PINECONE_API_KEY'),
-                    string(credentialsId: 'admin-pin', variable: 'ADMIN_PIN')
+                    string(credentialsId: 'GROQ_API_KEY', variable: 'GROQ_API_KEY'),
+                    string(credentialsId: 'PINECONE_API_KEY', variable: 'PINECONE_API_KEY'),
+                    string(credentialsId: 'ADMIN_PIN', variable: 'ADMIN_PIN')
                 ]) {
                     sh '''
                     cat > .env << EOF
