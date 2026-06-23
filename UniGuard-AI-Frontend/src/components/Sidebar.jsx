@@ -1,7 +1,7 @@
 // src/components/Sidebar.jsx
 import React, { useRef, useState, useEffect } from 'react';
 import { UploadCloud, CheckCircle, FileText, Trash2 } from 'lucide-react';
-import { uploadPDF, fetchDocuments, deleteDocument, loginAdmin } from '../services/api';
+import { uploadPDF, fetchDocuments, deleteDocument } from '../services/api';
 import './Sidebar.css';
 
 export default function Sidebar({ onUploadSuccess, userRole, regNo, token, activeTab, setActiveTab, onLogout, isOpen, closeMobile }) {
