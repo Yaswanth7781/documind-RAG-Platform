@@ -6,7 +6,7 @@ python-dotenv
 pymupdf
 langchain-text-splitters
 chromadb
-pinecone>=7.0.0
+pinecone
 sqlalchemy
 pyjwt
 python-multipart
