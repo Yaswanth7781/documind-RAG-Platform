@@ -25,7 +25,8 @@ def chat(request: ChatRequest) -> ChatResponse:
         result = execute_policy_workflow(
             prompt=request.prompt, 
             user_role=request.role,
-            history=request.history
+            history=request.history,
+            reg_no=request.reg_no
         )
         
         citations = []

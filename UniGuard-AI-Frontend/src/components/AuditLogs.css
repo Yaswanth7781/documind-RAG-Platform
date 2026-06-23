@@ -369,3 +369,20 @@
   background: rgba(16, 185, 129, 0.02);
   border-color: rgba(16, 185, 129, 0.15);
 }
+
+.high-risk-badge-container {
+  display: flex;
+  align-items: center;
+}
+
+.high-risk-badge-tag {
+  display: inline-block;
+  padding: 0.35rem 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+

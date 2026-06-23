@@ -28,8 +28,19 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def init_db():
     Base.metadata.create_all(bind=engine)
+    # Check if reg_no exists in audit_logs table, if not add it dynamically (SQLite schema migration)
+    from sqlalchemy import inspect
+    inspector = inspect(engine)
+    try:
+        columns = [col['name'] for col in inspector.get_columns('audit_logs')]
+        if 'reg_no' not in columns:
+            with engine.begin() as conn:
+                conn.execute("ALTER TABLE audit_logs ADD COLUMN reg_no VARCHAR(50)")
+            print("Successfully added reg_no column to audit_logs table.")
+    except Exception as e:
+        print(f"Failed to check/migrate audit_logs table schema: {e}")
 
-def insert_audit_log(role: str, query: str, intent: str, risk_level: str, confidence_score: str, decision: str, needs_review: bool):
+def insert_audit_log(role: str, query: str, intent: str, risk_level: str, confidence_score: str, decision: str, needs_review: bool, reg_no: str = None):
     """
     Inserts a newly completed multi-agent workflow into the local DB.
     """
@@ -42,10 +53,12 @@ def insert_audit_log(role: str, query: str, intent: str, risk_level: str, confid
             risk_level=risk_level,
             confidence_score=confidence_score,
             decision_summary=decision,
-            needs_review=1 if needs_review else 0
+            needs_review=1 if needs_review else 0,
+            reg_no=reg_no
         )
         db.add(log_entry)
         db.commit()
+
     except Exception as e:
         print(f"Failed to write audit log: {e}")
         db.rollback()

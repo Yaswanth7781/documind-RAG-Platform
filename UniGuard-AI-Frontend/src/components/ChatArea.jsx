@@ -5,7 +5,7 @@ import { Send, Bot, User } from 'lucide-react';
 import { chatWithAI } from '../services/api';
 import './ChatArea.css';
 
-export default function ChatArea({ isReady, userRole }) {
+export default function ChatArea({ isReady, userRole, regNo }) {
   const [messages, setMessages] = useState([
     { role: 'ai', content: "Hello! I'm the University Policy AI. Upload a PDF from the sidebar, and then ask me anything about it!" }
   ]);
@@ -63,7 +63,7 @@ export default function ChatArea({ isReady, userRole }) {
     setIsLoading(true);
 
     try {
-      const response = await chatWithAI(userMessage.content, historyPayload, userRole);
+      const response = await chatWithAI(userMessage.content, historyPayload, userRole, regNo);
 
       let aiContent = response.answer || response.response || response.message;
       if (!aiContent && typeof response === "string") {

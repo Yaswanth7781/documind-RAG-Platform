@@ -102,7 +102,7 @@ export const deleteDocument = async (filename, token) => {
   }
 }
 
-export const chatWithAI = async (message, history = [], role = 'Student') => {
+export const chatWithAI = async (message, history = [], role = 'Student', regNo = null) => {
   try {
     const response = await fetch(`${CHAT_API_URL}/ai/chat`, {
       method: 'POST',
@@ -112,7 +112,8 @@ export const chatWithAI = async (message, history = [], role = 'Student') => {
       body: JSON.stringify({
         prompt: message,
         history: history,
-        role: role
+        role: role,
+        reg_no: regNo
       }),
     });
 

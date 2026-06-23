@@ -53,7 +53,7 @@ def call_groq_llm(system_prompt: str, user_prompt: str, history: List[Any] = Non
         return f"API_ERROR: {error_msg}"
 
 
-def execute_policy_workflow(prompt: str, user_role: str, history: List[Any] = None) -> Dict[str, Any]:
+def execute_policy_workflow(prompt: str, user_role: str, history: List[Any] = None, reg_no: str = None) -> Dict[str, Any]:
     """
     The orchestrator pipeline routing through specialized agents.
     Returns the rich response map.
@@ -199,7 +199,8 @@ def execute_policy_workflow(prompt: str, user_role: str, history: List[Any] = No
             "risk_level": analysis_data.get("risk_level", "Unknown"),
             "confidence_score": analysis_data.get("confidence_score", "Unknown"),
             "decision": final_response,
-            "needs_review": analysis_data.get("needs_review", False)
+            "needs_review": analysis_data.get("needs_review", False),
+            "reg_no": reg_no
         }, timeout=5)
     except Exception as e:
         print(f"Failed to send audit log to Audit Service: {e}")

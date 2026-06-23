@@ -73,7 +73,7 @@ function App() {
       {userRole === 'Admin' && activeTab === 'audit' ? (
         <AuditLogs token={token} />
       ) : (
-        <ChatArea isReady={isReady} userRole={userRole} />
+        <ChatArea isReady={isReady} userRole={userRole} regNo={regNo} />
       )}
     </div>
   );

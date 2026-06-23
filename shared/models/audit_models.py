@@ -21,3 +21,5 @@ class AuditLog(Base):
     confidence_score = Column(String(10)) 
     decision_summary = Column(Text)
     needs_review = Column(Integer, default=0) # boolean via integer 0/1
+    reg_no = Column(String(50), nullable=True)
+

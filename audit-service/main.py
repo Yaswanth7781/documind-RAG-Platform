@@ -1,5 +1,6 @@
 from fastapi import FastAPI, Depends
 from pydantic import BaseModel
+from typing import Optional
 from audit_service import init_db, insert_audit_log, SessionLocal
 from shared.models.audit_models import AuditLog
 from shared.core.security import verify_token
@@ -14,6 +15,7 @@ class AuditRequest(BaseModel):
     confidence_score: str
     decision: str
     needs_review: bool
+    reg_no: Optional[str] = None
 
 @app.on_event("startup")
 def startup_event():
@@ -28,7 +30,8 @@ def create_audit(req: AuditRequest):
         risk_level=req.risk_level,
         confidence_score=req.confidence_score,
         decision=req.decision,
-        needs_review=req.needs_review
+        needs_review=req.needs_review,
+        reg_no=req.reg_no
     )
     return {"status": "success"}
 
@@ -36,7 +39,8 @@ def create_audit(req: AuditRequest):
 def get_audit_logs(token_payload: dict = Depends(verify_token)):
     db = SessionLocal()
     try:
-        logs = db.query(AuditLog).order_by(AuditLog.id.desc()).all()
+        # Show ONLY high risk queries in compliance audit logs
+        logs = db.query(AuditLog).filter(AuditLog.risk_level.ilike('high')).order_by(AuditLog.id.desc()).all()
         return {
             "status": "success",
             "logs": [
@@ -44,6 +48,7 @@ def get_audit_logs(token_payload: dict = Depends(verify_token)):
                     "id": log.id,
                     "timestamp": log.timestamp.isoformat() if log.timestamp else None,
                     "user_role": log.user_role,
+                    "reg_no": log.reg_no,
                     "query": log.query,
                     "intent": log.intent,
                     "risk_level": log.risk_level,
@@ -54,6 +59,7 @@ def get_audit_logs(token_payload: dict = Depends(verify_token)):
                 for log in logs
             ]
         }
+
     except Exception as e:
         return {"status": "error", "message": str(e)}
     finally:

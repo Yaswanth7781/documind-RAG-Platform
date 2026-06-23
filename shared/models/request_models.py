@@ -28,3 +28,8 @@ class ChatRequest(BaseModel):
         default="Student",
         description="Role of the user (Student, Admin, Faculty) querying the policies."
     )
+    reg_no: Optional[str] = Field(
+        default=None,
+        description="The registration number of the user."
+    )
+
