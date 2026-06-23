@@ -4,7 +4,7 @@ app/services/audit_service.py
 Handles configuring the SQLite DB and inserting Audit Log records.
 """
 import os
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from shared.models.audit_models import Base, AuditLog
 
@@ -35,7 +35,7 @@ def init_db():
         columns = [col['name'] for col in inspector.get_columns('audit_logs')]
         if 'reg_no' not in columns:
             with engine.begin() as conn:
-                conn.execute("ALTER TABLE audit_logs ADD COLUMN reg_no VARCHAR(50)")
+                conn.execute(text("ALTER TABLE audit_logs ADD COLUMN reg_no VARCHAR(50)"))
             print("Successfully added reg_no column to audit_logs table.")
     except Exception as e:
         print(f"Failed to check/migrate audit_logs table schema: {e}")
