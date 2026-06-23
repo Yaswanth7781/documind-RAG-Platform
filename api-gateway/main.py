@@ -17,6 +17,7 @@ app.add_middleware(
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8001")
 DOCUMENT_SERVICE_URL = os.getenv("DOCUMENT_SERVICE_URL", "http://document-service:8002")
 CHAT_SERVICE_URL = os.getenv("CHAT_SERVICE_URL", "http://chat-service:8003")
+AUDIT_SERVICE_URL = os.getenv("AUDIT_SERVICE_URL", "http://audit-service:8004")
 
 async def forward_request(url: str, request: Request) -> Response:
     client = httpx.AsyncClient(timeout=120.0)
@@ -51,6 +52,10 @@ async def route_documents(path: str, request: Request):
 @app.api_route("/ai/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
 async def route_chat(path: str, request: Request):
     return await forward_request(f"{CHAT_SERVICE_URL}/ai/{path}", request)
+
+@app.api_route("/audit/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+async def route_audit(path: str, request: Request):
+    return await forward_request(f"{AUDIT_SERVICE_URL}/audit/{path}", request)
 
 @app.get("/health")
 def health_check():

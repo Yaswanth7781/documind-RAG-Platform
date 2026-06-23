@@ -2,19 +2,50 @@
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
+import LoginSignup from './components/LoginSignup';
+import AuditLogs from './components/AuditLogs';
 import { Menu, X } from 'lucide-react'; //ham burger menu icons
 import './App.css';
 
 function App() {
+  const [token, setToken] = useState(localStorage.getItem('token') || null);
+  const [userRole, setUserRole] = useState(localStorage.getItem('role') || 'Student');
+  const [regNo, setRegNo] = useState(localStorage.getItem('regNo') || '');
+  const [activeTab, setActiveTab] = useState('chat');
   const [isReady, setIsReady] = useState(false);
-  const [userRole, setUserRole] = useState("Student");
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const handleLoginSuccess = (data) => {
+    localStorage.setItem('token', data.access_token);
+    localStorage.setItem('role', data.role);
+    localStorage.setItem('regNo', data.reg_no);
+    setToken(data.access_token);
+    setUserRole(data.role);
+    setRegNo(data.reg_no);
+    setActiveTab('chat');
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('regNo');
+    setToken(null);
+    setUserRole('Student');
+    setRegNo('');
+    setActiveTab('chat');
+  };
 
   const handleUploadSuccess = (data) => {
     console.log("Upload Success:", data);
     setIsReady(true);
   };
 
+  // 1. Unauthenticated view: Render signup/login
+  if (!token) {
+    return <LoginSignup onLoginSuccess={handleLoginSuccess} />;
+  }
+
+  // 2. Authenticated view
   return (
     <div className="app-container">
       {/* Mobile Top Bar */}
@@ -30,11 +61,20 @@ function App() {
       <Sidebar
         onUploadSuccess={handleUploadSuccess}
         userRole={userRole}
-        setUserRole={setUserRole}
+        regNo={regNo}
+        token={token}
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onLogout={handleLogout}
         isOpen={isMobileMenuOpen}
         closeMobile={setIsMobileMenuOpen}
       />
-      <ChatArea isReady={isReady} userRole={userRole} />
+      
+      {userRole === 'Admin' && activeTab === 'audit' ? (
+        <AuditLogs token={token} />
+      ) : (
+        <ChatArea isReady={isReady} userRole={userRole} />
+      )}
     </div>
   );
 }

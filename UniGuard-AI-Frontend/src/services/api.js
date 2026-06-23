@@ -7,17 +7,49 @@ const AUTH_API_URL = API_URL;
 const DOCUMENT_API_URL = API_URL;
 const CHAT_API_URL = API_URL;
 
-export const loginAdmin = async (pin) => {
+export const signupUser = async (regNo, password, role, adminPin) => {
+  try {
+    const response = await fetch(`${AUTH_API_URL}/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reg_no: regNo, password, role, admin_pin: adminPin })
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || `Signup failed: ${response.status}`);
+    return data;
+  } catch (error) {
+    console.error('Signup Error:', error);
+    throw error;
+  }
+};
+
+export const loginUser = async (regNo, password) => {
   try {
     const response = await fetch(`${AUTH_API_URL}/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pin })
+      body: JSON.stringify({ reg_no: regNo, password })
     });
-    if (!response.ok) throw new Error(`Login failed: ${response.status}`);
-    return await response.json();
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || `Login failed: ${response.status}`);
+    return data;
   } catch (error) {
     console.error('Login Error:', error);
+    throw error;
+  }
+};
+
+export const fetchAuditLogs = async (token) => {
+  try {
+    const response = await fetch(`${AUTH_API_URL}/audit/list`, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.detail || `Fetch audit logs failed: ${response.status}`);
+    return data;
+  } catch (error) {
+    console.error('Fetch Audit Logs Error:', error);
     throw error;
   }
 };

@@ -163,3 +163,43 @@
   background-color: var(--success-color);
   box-shadow: 0 0 8px var(--success-color);
 }
+
+.nav-tab-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid transparent;
+  cursor: pointer;
+}
+
+.nav-tab-btn:hover {
+  background: rgba(0, 0, 0, 0.02);
+  color: var(--text-primary);
+}
+
+.nav-tab-btn.active {
+  background: rgba(17, 20, 57, 0.08);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.logout-btn:hover {
+  background: rgba(239, 68, 68, 0.15) !important;
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.1);
+  transform: translateY(-1px);
+}
+
+.role-tag.student {
+  background: rgba(59, 130, 246, 0.1);
+  color: #2563eb;
+}
+
+.role-tag.faculty {
+  background: rgba(139, 92, 246, 0.1);
+  color: #7c3aed;
+}
+
+.role-tag.admin {
+  background: rgba(16, 185, 129, 0.1);
+  color: #059669;
+}
