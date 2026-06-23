@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import ChatArea from './components/ChatArea';
-import { Menu, X } from 'lucide-react';
+import { Menu, X } from 'lucide-react'; //ham burger menu icons
 import './App.css';
 
 function App() {

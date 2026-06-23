@@ -105,13 +105,28 @@ def get_all_documents():
     """Gets all unique document filenames."""
     pc_index = get_pinecone_index()
     try:
-        # Increase top_k to 10000 to scan the maximum chunk radius
+        unique_sources = set()
+        # 1. Attempt to list all record IDs (recommended for serverless indexes)
+        try:
+            for ids in pc_index.list():
+                for doc_id in ids:
+                    if "-p" in doc_id:
+                        # Extract the filename prefix: e.g. "authservice.pdf" from "authservice.pdf-p1-c0"
+                        filename = doc_id.rsplit("-p", 1)[0]
+                        unique_sources.add(filename)
+                    else:
+                        unique_sources.add(doc_id)
+            if unique_sources:
+                return list(unique_sources)
+        except Exception as list_err:
+            print(f"Pinecone list() failed, falling back to query: {list_err}")
+
+        # 2. Fallback: Query using a non-zero vector to avoid 400 Bad Request
         results = pc_index.query(
-            vector=[0.0] * 1024,
+            vector=[0.1] * 1024,
             top_k=10000,
             include_metadata=True
         )
-        unique_sources = set()
         for match in results.get("matches", []):
             if "metadata" in match and "source" in match["metadata"]:
                 unique_sources.add(match["metadata"]["source"])

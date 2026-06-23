@@ -16,7 +16,7 @@ async def process_pdf(file: UploadFile) -> str:
     all_chunks = []
     all_metadatas = []
     ids = []
-    
+
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=1000,
         chunk_overlap=200,
