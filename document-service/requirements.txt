@@ -9,3 +9,4 @@ pinecone
 boto3
 python-dotenv
 pyjwt
+requests

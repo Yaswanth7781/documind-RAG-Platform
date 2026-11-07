@@ -17,8 +17,9 @@ import os
 
 def call_groq_llm(system_prompt: str, user_prompt: str, history: List[Any] = None, json_mode: bool = False) -> str:
     """Helper to quickly call Groq API"""
-    if not GROQ_API_KEY:
-        raise HTTPException(status_code=400, detail="GROQ_API_KEY missing.")
+    api_key = os.getenv("GROQ_API_KEY") or GROQ_API_KEY
+    if not api_key:
+        raise HTTPException(status_code=400, detail="GROQ_API_KEY is missing. Please add GROQ_API_KEY to your .env file.")
     
     messages = [{"role": "system", "content": system_prompt}]
     
@@ -30,7 +31,7 @@ def call_groq_llm(system_prompt: str, user_prompt: str, history: List[Any] = Non
     messages.append({"role": "user", "content": user_prompt})
 
     headers = {
-        "Authorization": f"Bearer {GROQ_API_KEY}",
+        "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json",
     }
     payload = {
@@ -45,12 +46,19 @@ def call_groq_llm(system_prompt: str, user_prompt: str, history: List[Any] = Non
         response = requests.post(GROQ_BASE_URL, headers=headers, json=payload, timeout=60)
         response.raise_for_status()
         return response.json()["choices"][0]["message"]["content"]
-    except Exception as e:
-        error_msg = f"Agent LLM failure: {e}"
-        if hasattr(e, 'response') and hasattr(e.response, 'text'):
-            error_msg += f" | {e.response.text}"
-        print(error_msg)
-        return f"API_ERROR: {error_msg}"
+    except requests.HTTPError as e:
+        detail = e.response.text if e.response is not None else str(e)
+        print(f"Agent LLM failure: {detail}")
+        raise HTTPException(
+            status_code=e.response.status_code if e.response is not None else 502,
+            detail=f"Groq API request failed: {detail}"
+        ) from e
+    except (KeyError, IndexError, ValueError) as e:
+        print(f"Agent LLM returned an invalid response: {e}")
+        raise HTTPException(status_code=502, detail="Groq API returned an invalid response.") from e
+    except requests.RequestException as e:
+        print(f"Agent LLM connection failed: {e}")
+        raise HTTPException(status_code=502, detail="Could not connect to the Groq API.") from e
 
 
 def execute_policy_workflow(prompt: str, user_role: str, history: List[Any] = None, reg_no: str = None) -> Dict[str, Any]:
@@ -94,9 +102,9 @@ def execute_policy_workflow(prompt: str, user_role: str, history: List[Any] = No
         priority = "Low"
     
     # ---------------------------------------------------------
-    # AGENT 2: RAG Retrieval
+    # AGENT 2: RAG Retrieval (Hybrid Search: BM25 + Semantic Vector)
     # ---------------------------------------------------------
-    workflow_steps.append("Agent 2 (RAG Retrieval) -> Vector Search on ChromaDB")
+    workflow_steps.append("Agent 2 (RAG Retrieval) -> Hybrid Search (BM25 Keyword + Dense Vector with RRF)")
     math_confidence = "0.0%"
     try:
         raw_chunks, raw_metadatas, scores = search_similar_with_metadata(english_prompt, n_results=3)

@@ -1,13 +1,13 @@
 import os
 from fastapi import HTTPException
+from dotenv import load_dotenv
+
+load_dotenv(override=True)
 
 # ---- Configuration ----
-PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
 PINECONE_ENV = os.getenv("PINECONE_ENVIRONMENT", "us-east-1")
 PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "documind-index-1024")
-
-if not PINECONE_API_KEY:
-    raise ValueError("PINECONE_API_KEY is missing. Pinecone is now the only supported vector DB.")
 
 # Lazy Singleton
 _pc_index = None
@@ -15,9 +15,12 @@ _pc_client = None
 
 def get_pinecone_client():
     global _pc_client
+    api_key = os.getenv("PINECONE_API_KEY") or PINECONE_API_KEY
+    if not api_key:
+        raise ValueError("PINECONE_API_KEY is missing. Pinecone is now the required vector DB.")
     if _pc_client is None:
         from pinecone import Pinecone
-        _pc_client = Pinecone(api_key=PINECONE_API_KEY)
+        _pc_client = Pinecone(api_key=api_key)
     return _pc_client
 
 def get_pinecone_index():
@@ -70,14 +73,27 @@ def add_texts(texts: list[str], metadatas: list[dict], ids: list[str]):
         # Upsert
         pc_index.upsert(vectors=batch_vectors)
 
-def search_similar_with_metadata(query: str, n_results: int = 3):
+import re
+
+try:
+    from rank_bm25 import BM25Okapi
+    HAS_BM25 = True
+except ImportError:
+    HAS_BM25 = False
+
+def tokenize_text(text: str) -> list[str]:
+    """Tokenize string into lowercase terms for BM25 ranking."""
+    return re.findall(r'\w+', text.lower())
+
+def search_similar_with_metadata(query: str, n_results: int = 3, hybrid: bool = True):
     """
-    Returns text chunks AND metadata from Pinecone using Inference API.
+    Performs Hybrid Search (BM25 Lexical Keyword + Pinecone Dense Semantic Vector Search)
+    fused with Reciprocal Rank Fusion (RRF).
     """
     pc = get_pinecone_client()
     pc_index = get_pinecone_index()
     
-    # Remote query embedding
+    # 1. Remote query embedding via Pinecone inference API
     response = pc.inference.embed(
         model="multilingual-e5-large",
         inputs=[query],
@@ -85,15 +101,64 @@ def search_similar_with_metadata(query: str, n_results: int = 3):
     )
     query_embedding = response[0]['values']
     
+    # Fetch candidate pool for RRF re-ranking (e.g., top 15 candidates)
+    candidate_k = max(n_results * 5, 15)
     results = pc_index.query(
         vector=query_embedding,
-        top_k=n_results,
+        top_k=candidate_k,
         include_metadata=True
     )
     
-    docs = [match["metadata"]["text"] for match in results.get("matches", [])]
-    metas = [match["metadata"] for match in results.get("matches", [])]
-    scores = [match["score"] for match in results.get("matches", [])]
+    matches = results.get("matches", [])
+    if not matches:
+        return [], [], []
+    
+    raw_docs = [match["metadata"]["text"] for match in matches if "metadata" in match and "text" in match["metadata"]]
+    raw_metas = [match["metadata"] for match in matches if "metadata" in match and "text" in match["metadata"]]
+    raw_scores = [match["score"] for match in matches if "metadata" in match and "text" in match["metadata"]]
+    
+    if not raw_docs:
+        return [], [], []
+        
+    if not hybrid or not HAS_BM25 or len(raw_docs) <= 1:
+        return raw_docs[:n_results], raw_metas[:n_results], raw_scores[:n_results]
+    
+    # 2. BM25 Lexical Keyword Search Scoring
+    tokenized_corpus = [tokenize_text(doc) for doc in raw_docs]
+    tokenized_query = tokenize_text(query)
+    
+    bm25 = BM25Okapi(tokenized_corpus)
+    bm25_scores = bm25.get_scores(tokenized_query)
+    
+    # Ranks for Dense Vector Search (0-indexed)
+    vector_ranks = list(range(len(raw_docs)))
+    
+    # Ranks for BM25 (sort indices descending by score)
+    bm25_indices_sorted = sorted(range(len(bm25_scores)), key=lambda i: bm25_scores[i], reverse=True)
+    bm25_ranks = {idx: rank for rank, idx in enumerate(bm25_indices_sorted)}
+    
+    # 3. Reciprocal Rank Fusion (RRF)
+    # RRF_Score(d) = alpha / (60 + rank_vector) + (1 - alpha) / (60 + rank_bm25)
+    k_rrf = 60
+    alpha = 0.5
+    rrf_scores = []
+    
+    for i in range(len(raw_docs)):
+        v_rank = vector_ranks[i]
+        b_rank = bm25_ranks[i]
+        rrf = (alpha / (k_rrf + v_rank + 1)) + ((1 - alpha) / (k_rrf + b_rank + 1))
+        rrf_scores.append(rrf)
+    
+    # Combine and sort by final RRF score descending
+    combined = list(zip(rrf_scores, raw_docs, raw_metas, raw_scores))
+    combined.sort(key=lambda x: x[0], reverse=True)
+    
+    top_items = combined[:n_results]
+    docs = [item[1] for item in top_items]
+    metas = [item[2] for item in top_items]
+    # Retain dense vector score for similarity threshold verification
+    scores = [item[3] for item in top_items]
+    
     return docs, metas, scores
 
 def search_similar(query: str, n_results: int = 3) -> list[str]:
@@ -139,7 +204,7 @@ def get_all_documents():
         return list(unique_sources)
     except Exception as e:
         print(f"Pinecone Sync Error: {e}")
-        return []
+        raise RuntimeError(f"Could not list uploaded documents from Pinecone: {e}") from e
 
 def delete_document(filename: str):
     """Deletes all chunks associated with a specific document."""
@@ -148,3 +213,4 @@ def delete_document(filename: str):
         pc_index.delete(filter={"source": filename})
     except Exception as e:
         print(f"Failed to delete document {filename}: {e}")
+        raise RuntimeError(f"Could not delete document {filename} from Pinecone: {e}") from e

@@ -11,3 +11,4 @@ sqlalchemy
 pyjwt
 python-multipart
 boto3
+rank_bm25

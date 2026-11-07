@@ -39,8 +39,8 @@ def create_audit(req: AuditRequest):
 def get_audit_logs(token_payload: dict = Depends(verify_token)):
     db = SessionLocal()
     try:
-        # Show ONLY high risk queries in compliance audit logs
-        logs = db.query(AuditLog).filter(AuditLog.risk_level.ilike('high')).order_by(AuditLog.id.desc()).all()
+        # Include document lifecycle events so administrators can verify deletions.
+        logs = db.query(AuditLog).order_by(AuditLog.id.desc()).all()
         return {
             "status": "success",
             "logs": [

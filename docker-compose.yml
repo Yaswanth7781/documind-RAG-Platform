@@ -19,26 +19,17 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - AUTH_SERVICE_URL=http://auth-service:8001
       - DOCUMENT_SERVICE_URL=http://document-service:8002
       - CHAT_SERVICE_URL=http://chat-service:8003
+    env_file:
+      - .env
     depends_on:
-      - auth-service
       - document-service
       - chat-service
     volumes:
+      - ./data:/app/data
       - ./shared:/app/shared
 
-  auth-service:
-    build:
-      context: .
-      dockerfile: auth-service/Dockerfile
-    ports:
-      - "8001:8001"
-    env_file:
-      - .env
-    volumes:
-      - ./shared:/app/shared
 
   document-service:
     build:
@@ -48,6 +39,10 @@ services:
       - "8002:8002"
     env_file:
       - .env
+    environment:
+      - AUDIT_SERVICE_URL=http://audit-service:8004
+    depends_on:
+      - audit-service
     volumes:
       - ./shared:/app/shared
       - model_cache:/root/.cache

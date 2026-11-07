@@ -7,6 +7,24 @@ const AUTH_API_URL = API_URL;
 const DOCUMENT_API_URL = API_URL;
 const CHAT_API_URL = API_URL;
 
+const getErrorMessage = async (response, fallback) => {
+  try {
+    const data = await response.json();
+    return data.detail || data.message || `${fallback}: ${response.status}`;
+  } catch {
+    return `${fallback}: ${response.status}`;
+  }
+};
+
+const handleUnauthorized = (response) => {
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('role');
+    localStorage.removeItem('regNo');
+    window.dispatchEvent(new Event('auth-expired'));
+  }
+};
+
 export const signupUser = async (regNo, password, role, adminPin) => {
   try {
     const response = await fetch(`${AUTH_API_URL}/auth/signup`, {
@@ -45,6 +63,7 @@ export const fetchAuditLogs = async (token) => {
       method: 'GET',
       headers: { 'Authorization': `Bearer ${token}` }
     });
+    handleUnauthorized(response);
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || `Fetch audit logs failed: ${response.status}`);
     return data;
@@ -67,7 +86,8 @@ export const uploadPDF = async (file, token) => {
       body: formData,
     });
 
-    if (!response.ok) throw new Error(`Upload failed: ${response.status}`);
+    handleUnauthorized(response);
+    if (!response.ok) throw new Error(await getErrorMessage(response, 'Upload failed'));
     return await response.json();
   } catch (error) {
     console.error('Upload Error:', error);
@@ -75,10 +95,15 @@ export const uploadPDF = async (file, token) => {
   }
 };
 
-export const fetchDocuments = async () => {
+export const fetchDocuments = async (token) => {
   try {
-    const response = await fetch(`${DOCUMENT_API_URL}/documents/list`);
-    if (!response.ok) throw new Error(`Fetch docs failed: ${response.status}`);
+    const response = await fetch(`${DOCUMENT_API_URL}/documents/list`, {
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+    handleUnauthorized(response);
+    if (!response.ok) throw new Error(await getErrorMessage(response, 'Fetch documents failed'));
     return await response.json();
   } catch (error) {
     console.error('Fetch Docs Error:', error);
@@ -88,13 +113,14 @@ export const fetchDocuments = async () => {
 
 export const deleteDocument = async (filename, token) => {
   try {
-    const response = await fetch(`${DOCUMENT_API_URL}/documents/${filename}`, {
+    const response = await fetch(`${DOCUMENT_API_URL}/documents/${encodeURIComponent(filename)}`, {
       method: 'DELETE',
       headers: {
         'Authorization': `Bearer ${token}`
       }
     });
-    if (!response.ok) throw new Error(`Delete failed: ${response.status}`);
+    handleUnauthorized(response);
+    if (!response.ok) throw new Error(await getErrorMessage(response, 'Delete failed'));
     return await response.json();
   } catch (error) {
     console.error('Delete Error:', error);
@@ -117,7 +143,7 @@ export const chatWithAI = async (message, history = [], role = 'Student', regNo 
       }),
     });
 
-    if (!response.ok) throw new Error(`Chat failed: ${response.status}`);
+    if (!response.ok) throw new Error(await getErrorMessage(response, 'Chat failed'));
     return await response.json();
   } catch (error) {
     console.error('Chat Error:', error);

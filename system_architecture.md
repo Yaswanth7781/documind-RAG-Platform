@@ -16,9 +16,9 @@ flowchart TB
     classDef external fill:#ef4444,stroke:#dc2626,stroke-width:2px,color:#fff,rx:8px
 
     User([👤 User / Admin]):::client -->|React + Vite| Frontend[🖥️ Frontend Client]:::client
-    Frontend -->|HTTP Requests| APIGateway{🚦 API Gateway\nPort 8000}:::gateway
+    Frontend -->|HTTP Requests| APIGateway{🚦 API Gateway\nPort 8000\n(Auth & Routing)}:::gateway
     
-    APIGateway -->|/auth| Auth[🔐 Auth Service\nPort 8001]:::service
+    APIGateway -->|User Auth| UserDB[(🗄️ Users SQLite DB)]:::database
     APIGateway -->|/documents| Doc[📄 Document Service\nPort 8002]:::service
     APIGateway -->|/ai| Chat[🤖 Chat Service\nPort 8003]:::service
     
@@ -81,10 +81,11 @@ sequenceDiagram
 
 All external requests from the frontend are routed through the **API Gateway (`http://localhost:8000`)**.
 
-### 🔐 Auth Service (`/auth`)
+### 🔐 Auth Endpoints (`/auth` - Handled directly by API Gateway)
 | Endpoint | Method | Security | Description |
 |----------|--------|----------|-------------|
-| `/auth/login` | `POST` | Public | Authenticates an Admin using a secure PIN. Returns a JWT Bearer token. |
+| `/auth/signup` | `POST` | Public | Registers a new user (Student/Faculty/Admin). Validates Admin PIN if role is Admin. |
+| `/auth/login` | `POST` | Public | Authenticates credentials against SQLite DB. Returns a JWT Bearer token and role details. |
 
 ### 📄 Document Service (`/documents`)
 | Endpoint | Method | Security | Description |

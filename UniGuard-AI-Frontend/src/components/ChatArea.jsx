@@ -86,7 +86,7 @@ export default function ChatArea({ isReady, userRole, regNo }) {
 
       setMessages(prev => [...prev, newMsg]);
     } catch (err) {
-      setMessages(prev => [...prev, { role: 'ai', content: "Error connecting to backend API. Please check if the FastAPI server is running." }]);
+      setMessages(prev => [...prev, { role: 'ai', content: `Chat request failed: ${err.message}` }]);
     } finally {
       setIsLoading(false);
     }

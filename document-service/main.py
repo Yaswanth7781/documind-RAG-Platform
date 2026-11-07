@@ -1,3 +1,6 @@
+import os
+
+import requests
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from document_service import process_pdf
 from shared.services.vector_store import get_all_documents, delete_document
@@ -36,7 +39,8 @@ async def upload_document(file: UploadFile = File(...)):
 
 @app.get(
     "/documents/list",
-    summary="List all uploaded documents"
+    summary="List all uploaded documents",
+    dependencies=[Depends(verify_token)]
 )
 def list_documents():
     docs = get_all_documents()
@@ -47,9 +51,24 @@ def list_documents():
     summary="Delete an enterprise document",
     dependencies=[Depends(verify_token)]
 )
-def remove_document(filename: str):
+def remove_document(filename: str, token_payload: dict = Depends(verify_token)):
     try:
         delete_document(filename)
+        audit_service_url = os.getenv("AUDIT_SERVICE_URL", "http://audit-service:8004")
+        requests.post(
+            f"{audit_service_url}/audit",
+            json={
+                "role": token_payload.get("role", "admin").title(),
+                "query": f"Document deleted: {filename}",
+                "intent": "DOCUMENT_DELETION",
+                "risk_level": "high",
+                "confidence_score": "1.0",
+                "decision": f"Deleted document {filename} from the vector store.",
+                "needs_review": False,
+                "reg_no": token_payload.get("reg_no"),
+            },
+            timeout=10,
+        ).raise_for_status()
         return {"status": "success", "message": f"Deleted {filename} from vector store."}
     except Exception as e:
         raise HTTPException(500, detail=f"Failed to delete document: {e}")

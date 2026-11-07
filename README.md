@@ -6,11 +6,15 @@ This directory contains the modernized microservices architecture for the UniGua
 
 The monolithic backend has been decoupled into the following independent services:
 
-- **api-gateway (Port 8000)**: Serves as the single entry point. Proxies frontend requests to the underlying services based on route prefixes (`/auth/*`, `/documents/*`, `/ai/*`).
-- **auth-service (Port 8001)**: Validates Admin PINs and handles JWT generation.
-- **document-service (Port 8002)**: Ingests enterprise PDFs, extracts text, chunks it, and uploads the embeddings to Pinecone (or local ChromaDB).
-- **chat-service (Port 8003)**: Executes the 5-Agent Pipeline to process queries, retrieve context, analyze compliance risk, and generate summaries.
-- **audit-service (Port 8004)**: Manages SQLite database and records the conversational audit logs async.
+- **api-gateway (Port 8000)**: Serves as the single entry point. Handles user authentication (`/auth/*`) natively, and proxies request routes (`/documents/*`, `/ai/*`, `/audit/*`) to specialized backend services.
+- **document-service (Port 8002)**: Ingests enterprise PDFs, extracts text, chunks it, and uploads dense embeddings to Pinecone serverless vector store.
+- **chat-service (Port 8003)**: Executes the 5-Agent Pipeline powered by Groq Llama 3 and **BM25 + Dense Semantic Hybrid Search (Reciprocal Rank Fusion)** to retrieve compliance context, analyze risk, and generate persona responses.
+- **audit-service (Port 8004)**: Manages SQLite database and records conversational audit logs async.
+
+## Key Features & Research Paper
+
+- **Hybrid RAG Retrieval Engine**: Combines Sparse Lexical BM25 ranking with Dense `multilingual-e5-large` vector embeddings using Reciprocal Rank Fusion (RRF).
+- **Publication & Documentation**: The comprehensive IEEE research paper detailing system performance, benchmarks, and multi-agent pipeline is available in [`IEEE_Conference_Paper_UniGuard_AI.md`](file:///c:/Users/user/Desktop/agenticaipro/UniGuard-AI-Multi-Agent-RAG-Based-University-Compliance-Intelligence-Platform/UniGuard-AI-Microservices/IEEE_Conference_Paper_UniGuard_AI.md).
 
 ## Running the Architecture
 
@@ -34,7 +38,6 @@ If you prefer to run them manually:
 ```bash
 $env:PYTHONPATH="C:\path\to\UniGuard-AI-Microservices"
 uvicorn api-gateway.main:app --port 8000
-uvicorn auth-service.main:app --port 8001
 uvicorn document-service.main:app --port 8002
 uvicorn chat-service.main:app --port 8003
 uvicorn audit-service.main:app --port 8004
